@@ -1,0 +1,97 @@
+_schema-version: "3.1"
+ID: lti_practice_CAP
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: lti_practice_CAP-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: lti_practice_CAP-auth
+  - name: lti_practice_CAP-db
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    readiness-health-check-http-endpoint: /health
+    readiness-health-check-type: http
+  build-parameters:
+    builder: npm
+- name: lti_practice_CAP-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: lti_practice_CAP-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: lti_practice_CAP-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: lti_practice_CAP-destination-service
+    parameters:
+      content-target: true
+  - name: lti_practice_CAP_html_repo_host
+    parameters:
+      service-key:
+        name: lti_practice_CAP_html_repo_host-key
+  - name: lti_practice_CAP-auth
+    parameters:
+      service-key:
+        name: lti_practice_CAP-auth-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: OrdersApp_lti_practice_CAP_html_repo_host
+          ServiceInstanceName: lti_practice_CAP-html5-app-host-service
+          ServiceKeyName: lti_practice_CAP_html_repo_host-key
+          sap.cloud.service: OrdersApp
+        - Authentication: OAuth2UserTokenExchange
+          Name: OrdersApp_lti_practice_CAP_auth
+          ServiceInstanceName: lti_practice_CAP-auth
+          ServiceKeyName: lti_practice_CAP-auth-key
+          sap.cloud.service: OrdersApp
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+resources:
+- name: lti_practice_CAP-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: lti_practice_CAP-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+    restrict_all_services: false
+- name: lti_practice_CAP-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: lti_practice_CAP-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      version: 1.0.0
+    service: destination
+    service-name: lti_practice_CAP-destination-service
+    service-plan: lite
+- name: lti_practice_CAP_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: lti_practice_CAP-html5-app-host-service
+    service-plan: app-host
+parameters:
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm install --production
+    - npx -p @sap/cds-dk cds build --production

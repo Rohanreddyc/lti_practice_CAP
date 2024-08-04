@@ -1,0 +1,23 @@
+{
+  "xsappname": "lti_practice_cap",
+  "tenant-mode": "dedicated",
+  "description": "Security profile of called application",
+  "scopes": [
+    {
+      "name": "uaa.user",
+      "description": "UAA"
+    }
+  ],
+  "oauth2-configuration": {
+    "grant-types": ["client_credentials"]
+  },
+  "role-templates": [
+    {
+      "name": "Token_Exchange",
+      "description": "UAA",
+      "scope-references": [
+        "uaa.user"
+      ]
+    }
+  ]
+}
